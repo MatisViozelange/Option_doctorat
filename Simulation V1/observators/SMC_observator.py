@@ -74,4 +74,32 @@ class SMC_Observer(Common_Observer):
         
         self.estimated_extended_state += self.estimated_extended_state_dot * self.dt
         
+class SMC_Observer_2(Common_Observer):
+    def __init__(self, dt, dynamics=None) -> None:
+        super().__init__(dt, dynamics=dynamics)
+
+        self.Lphi1 = 5
+        self.Lphi2 = 10
+        self.s1    = .1
+        self.s2    = 1.5
+        self.s3    = 1.1
+        
+    def estimate_state(self, x_bar_estimated, y, u, t):
+        
+        self.e1 = x_bar_estimated[0] - y[0]
+        self.e2 = x_bar_estimated[1] - y[1]
+        
+        self.gamma1 = self.s1 * self.Lphi1 * torch.sign(self.e1)
+        self.gamma2 = self.s2 * pow(self.Lphi2, 1/2) * pow(torch.abs(self.e2), 1/2) * torch.sign(self.e2)
+        self.gamma3 = self.s3 * self.Lphi2 * torch.sign(self.gamma2)
+        
+        f_x = self.f(x_bar_estimated[:2], u, estimated_perturbation=x_bar_estimated[2] , t=t, return_fx=True)
+        
+        self.estimated_extended_state_dot = torch.tensor([f_x[0], f_x[1], 0], dtype=float)
+        
+        self.estimated_extended_state_dot[0] -= self.gamma1
+        self.estimated_extended_state_dot[1] -= self.gamma2
+        self.estimated_extended_state_dot[2] -= self.gamma3
+        
+        self.estimated_extended_state += self.estimated_extended_state_dot * self.dt
         
