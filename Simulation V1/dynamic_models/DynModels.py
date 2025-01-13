@@ -5,32 +5,37 @@ import torch
 import math
 
 class SimpleDynamicModel:
-    def __init__(self, dt):
+    def __init__(self, dt) -> None:
         # State dimension 
         self.state_dim = 2
         
-        # Control input dimension 
-        self.control_dim = 1
-
         # Time step
         self.dt = dt
         self.fb = 0.3  # Hz
         
         # covariances
-        self.dynamic_noise_cov_coef = 0.005
-        self.control_noise_cov_coef = 0.0005
+        self.extended_dynamic_noise_cov_coef = torch.tensor([0.05, 0.05, 0.], dtype=float)
+        self.dynamic_noise_cov_coef = torch.tensor([0.05, 0.05], dtype=float)
         
-        # Process noise covariance (Q)
-        self.dynamic_noise_covariance = torch.eye(self.state_dim, dtype=float) * self.dynamic_noise_cov_coef
-        self.dynamic_noise_covariance[1, 1] = 0.001 
+    @property
+    def dynamic_noise_covariance(self):
+        if self.state_dim == 2:
+            # On retourne une matrice 2x2 diagonale
+            return torch.diag(self.dynamic_noise_cov_coef)
+        else:
+            # On retourne une matrice 3x3 diagonale
+            return torch.diag(self.extended_dynamic_noise_cov_coef)
         
-        # Control noise covariance (R_u)
-        self.control_noise_covariance = torch.eye(self.control_dim, dtype=float) * self.control_noise_cov_coef
-                                          
-         
+    def process_noise(self, dim=3):
+        self.state_dim = dim
+        dyn_noise = torch.randn(dim, dtype=float) @ torch.sqrt(self.dynamic_noise_covariance)
+        
+        self.state_dim = 2
+        return dyn_noise
+    
     def f(self, x, u, t):
         # compute the model dynamics with the unmodeled dynamics
-        x_dot = torch.tensor([x[1], u + self.b(t=t)], dtype=float)
+        x_dot = torch.tensor([x[1], u + self.b(x=x, u=u, t=t)], dtype=float)
         
         return x + x_dot * self.dt
         
@@ -47,14 +52,10 @@ class SimpleDynamicModel:
             return x_dot
         
     def b(self, x=None, u=None, t=0.0):
+        # return 20 * torch.sin(x[0]) + 5 * math.sin(2 * math.pi * self.fb * t)
         return 5 * math.sin(2 * math.pi * self.fb * t) 
          
-    def process_noise(self):
-        return torch.randn(self.state_dim) * torch.sqrt(torch.diag(self.dynamic_noise_covariance))
     
-    def control_noise(self):
-        return torch.randn(self.control_dim) * torch.sqrt(torch.diag(self.control_noise_covariance))
-
 
 class Pendule(SimpleDynamicModel):
     def __init__(self, dt):
@@ -91,14 +92,24 @@ class Pendule(SimpleDynamicModel):
         x1_dot = x[1]
         x2_dot = self.b(x, u=u, t=t) + self.a(x, u=u, t=t) * u
         
-        return torch.tensor([x1_dot, x2_dot], dtype=float)
+        x_dot = torch.tensor([x1_dot, x2_dot], dtype=float)
+        
+        return x + x_dot * self.dt
     
-    def f_without_perturbation(self, x, u, t=0.0):
-        
-        x1_dot = x[1]
-        x2_dot = self.a(x, u=u, t=t) * u
-        
-        return torch.tensor([x1_dot, x2_dot], dtype=float)
+    def f_without_perturbation(self, x, u, estimated_perturbation=None, return_fx=False, t=0.0):
+        # compute the model dynamics without the unmodeled dynamics 
+        if estimated_perturbation is not None:
+            x1_dot = x[1]
+            x2_dot = estimated_perturbation + self.a(x, u=u, t=t) * u
+            
+        else:
+            x1_dot = x[1]
+            x2_dot = self.b(x, u=u, t=t) + self.a(x, u=u, t=t) * u
+            
+        if not return_fx:
+            return x + torch.tensor([x1_dot, x2_dot], dtype=float) * self.dt
+        else:
+            return torch.tensor([x1_dot, x2_dot], dtype=float)
 
     
     

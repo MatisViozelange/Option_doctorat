@@ -30,13 +30,13 @@ class DataStore():
         self.true_perturbations = torch.zeros(self.n + 1)
         self.estimated_perturbations = torch.zeros(self.n + 1)
         
-        self.y = torch.zeros(self.n)
-        self.e = torch.zeros(self.n)
-        self.s = torch.zeros(self.n)
+        # e might be your position error over time, but in case you want velocity error, define them similarly
+        self.y = torch.zeros(self.n, 2)
+        self.e = torch.zeros(self.n)  # Possibly position error
+        self.s = torch.zeros(self.n)  # Sliding variable
         
         self.inputs = torch.zeros(self.n)
         self.v_dot = torch.zeros(self.n)
-        
         
         ############# PLOTS ################
         self.fig_num = 1
@@ -73,11 +73,6 @@ class DataStore():
         # control input plot
         ax3.set_title('Control Input')
         ax3.plot(self.times, self.inputs, label='Control Input')
-        # ax3.plot(
-        #     self.times, 
-        #     torch.gradient(self.inputs, spacing=self.Te)[0], 
-        #     label='u_dot'
-        # )
         ax3.set_ylabel('Control Inputs')
         ax3.legend()
 
@@ -111,6 +106,88 @@ class DataStore():
         plt.tight_layout()
         
         self.fig_num += 1
+
+    def plot_errors(self):
+        """
+        Plots the position error, velocity error, and perturbation estimation error
+        and shows their cumulative L2-norm over time.
+        Also prints out the final cumulative L2-norm value for each error.
+        """
+        # Compute errors
+        position_error = self.true_states[0, :-1] - self.estimated_states[0, :-1]
+        velocity_error = self.true_states[1, :-1] - self.estimated_states[1, :-1]
+        perturbation_error = self.true_perturbations[:-1] - self.estimated_perturbations[:-1]
+
+        # -- MSE of each error
+        mse_pos = torch.mean(position_error**2)
+        mse_vel = torch.mean(velocity_error**2)
+        mse_per = torch.mean(perturbation_error**2)
+
+        # Print final values
+        print("==== Errors ====")
+        print(f"Final MSE of Position Error:     {mse_pos.item()}")
+        print(f"Final MSE of Velocity Error:      {mse_vel.item()}")
+        print(f"Final MSE of Perturbation Error:  {mse_per.item()}")
+
+        # Plot errors and their cumulative sums
+        fig, axs = plt.subplots(3, 1, num=self.fig_num, figsize=(12, 4))
+        self.fig_num += 1
+
+        # raw errors
+        axs[0].set_title("Raw x1 Error")
+        axs[0].plot(self.times, position_error, label='Position Error')
+        axs[0].set_xlabel('Time')
+        axs[0].set_ylabel('x1 Error')
+        axs[0].legend()
+        axs[0].grid(True)
+
+        axs[1].set_title("Raw x2 Error")
+        axs[1].plot(self.times, velocity_error, label='Velocity Error')
+        axs[1].set_xlabel('Time')
+        axs[1].set_ylabel('x2 Error')
+        axs[1].legend()
+        axs[1].grid(True)
+
+        axs[2].set_title("Raw Perturbation Error")
+        axs[2].plot(self.times, perturbation_error, label='Perturbation Error')
+        axs[2].set_xlabel('Time')
+        axs[2].set_ylabel('b Error')
+        axs[2].legend()
+        axs[2].grid(True)
         
+        plt.tight_layout()
+
+    def plot_gain_and_perturbation_derivative(self):
+        """
+        Plots the controller gain k and the derivative of the TRUE perturbation.
+        Prints out the maximum of their absolute values and the median value of k.
+        """
+        # Derivative of true perturbation
+        pert_deriv = torch.gradient(self.true_perturbations[:-1], spacing=self.Te)[0]
+        abs_pert_deriv = torch.abs(pert_deriv)
+        
+        # Evaluate stats
+        max_k = torch.max(torch.abs(self.k[:-1]))
+        max_pert_deriv = torch.max(abs_pert_deriv)
+        median_k = torch.median(self.k[:-1])
+
+        # Print stats
+        print("==== Gain & Perturbation Derivative Stats ====")
+        print(f"Max |k| = {max_k.item():.4f}")
+        print(f"Max |True Pert. Derivative| = {max_pert_deriv.item():.4f}")
+        print(f"Median k = {median_k.item():.4f}")
+
+        # Plot
+        fig, ax = plt.subplots(num=self.fig_num, figsize=(8, 4))
+        self.fig_num += 1
+
+        ax.set_title("Gain and Perturbation Derivative")
+        ax.plot(self.times, self.k[:-1], label='Gain k')
+        ax.plot(self.times, abs_pert_deriv, label='|True Pert. Derivative|')
+        ax.axhline(y=median_k, color='g', linestyle='--', label=f'Median k = {median_k:.2f}')
+        ax.set_xlabel('Time')
+        ax.legend()
+        ax.grid(True)
+
     def show_plots(self):
         plt.show()

@@ -28,7 +28,7 @@ class ASTWC():
         
         self.alpha = 100.0
         self.alpha_star = 3.0
-        self.epsilon = 0.2
+        self.epsilon = 0.02
         
         self.x1 = 0.
         self.x2 = 0.

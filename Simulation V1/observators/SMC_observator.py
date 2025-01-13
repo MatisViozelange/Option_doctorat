@@ -7,6 +7,7 @@ class Common_Observer():
         self.estimated_extended_state     = torch.tensor([0., 0., 0.], dtype=float)
         self.estimated_extended_state_dot = torch.tensor([0., 0., 0.], dtype=float)
         self.dt = dt
+        self.dphi_inv = torch.eye(3, dtype=float)
         
         if controler is not None:
             self.controler_type = controler.name
@@ -57,8 +58,7 @@ class SMC_Observer(Common_Observer):
         self.s3    = 1.1
         
     def estimate_state(self, x_bar_estimated, y, u, t):
-        
-        self.e1 = x_bar_estimated[0] - y
+        self.e1 = x_bar_estimated[0] - y[0]
         
         self.gamma1 = self.s1 * pow(self.Lphi1, 1/3) * pow(torch.abs(self.e1), 2/3) * torch.sign(self.e1)
         self.gamma2 = self.s2 * pow(self.Lphi1, 1/2) * pow(torch.abs(self.gamma1), 1/2) * torch.sign(self.gamma1)
@@ -78,7 +78,7 @@ class SMC_Observer_2(Common_Observer):
     def __init__(self, dt, dynamics=None) -> None:
         super().__init__(dt, dynamics=dynamics)
 
-        self.Lphi1 = 5
+        self.Lphi1 = 1
         self.Lphi2 = 10
         self.s1    = .1
         self.s2    = 1.5
@@ -97,9 +97,9 @@ class SMC_Observer_2(Common_Observer):
         
         self.estimated_extended_state_dot = torch.tensor([f_x[0], f_x[1], 0], dtype=float)
         
-        self.estimated_extended_state_dot[0] -= self.gamma1
-        self.estimated_extended_state_dot[1] -= self.gamma2
-        self.estimated_extended_state_dot[2] -= self.gamma3
+        # self.dphi_inv[2, 0] = - 20 * torch.cos(x_bar_estimated[0])
+        correction = self.dphi_inv @ torch.tensor([-self.gamma1, -self.gamma2, -self.gamma3], dtype=float)
         
+        self.estimated_extended_state_dot += correction
         self.estimated_extended_state += self.estimated_extended_state_dot * self.dt
-        
+         
