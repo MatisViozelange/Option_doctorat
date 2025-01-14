@@ -1,6 +1,6 @@
 from data_manager import DataStore
 from controllers import ASTWC, NN_based_STWC
-from observators import SMC_Observer, SMC_Observer_2, High_Gain_Observer
+from observators import SMC_Observer, SMC_Observer_2, SMC_Observer_3, High_Gain_Observer
 from observators import ExtendedKalmanFilter as EKF
 from observators import KalmanFilter as KF
 from observators import KalmanFilter_2 as KF_2
@@ -13,8 +13,8 @@ from tqdm import tqdm
 simulation_time = 20
 time_step = 0.005
 times = torch.arange(0.0, simulation_time, time_step)
-f_ref = 0.5 # Hz
-reference = 5 * torch.sin(2 * torch.pi * f_ref * times)
+f_ref = 0.2 # Hz
+reference = None#5 * torch.sin(2 * torch.pi * f_ref * times)
 
 # Initialize the dynamic and sensor models
 dynamic_model = SimpleDynamicModel(dt=time_step)
@@ -22,15 +22,20 @@ dynamic_model = SimpleDynamicModel(dt=time_step)
 sensor_model = SimpleSensorModel()
 
 # Initialize the controller
-controller = ASTWC(time=simulation_time, Te=time_step, reference=reference)
-# controller = NN_based_STWC(time=simulation_time, Te=time_step, neurones=50, gamma=0.075, reference=reference)
+# controller = ASTWC(time=simulation_time, Te=time_step, reference=reference)
+controller = NN_based_STWC(time=simulation_time, Te=time_step, neurones=50, gamma=0.075, reference=reference)
 
 # DataStrorage
 data_store = DataStore(times=times, reference=reference, Te=time_step)
 data_store.control_param_init(controller)
 
 # Initial state estimate
-initial_extended_state_estimate = torch.tensor([0.1, 0., 0.], dtype=float)  # Starting at position 0 with velocity 1
+initial_extended_state_estimate = torch.tensor([10., 10., 0.], dtype=float)  
+initial_extended_state_estimate[2] = dynamic_model.b(
+    initial_extended_state_estimate[:2], 
+    t=torch.tensor([0.]), 
+    u=torch.tensor([0.])
+)
 controller.init_state(initial_extended_state_estimate)
 data_store.initialize(initial_extended_state_estimate[:2])
 
@@ -41,12 +46,13 @@ estimated_extended_state = initial_extended_state_estimate.clone()
 # Initialize the observer
 # state_estimator = High_Gain_Observer(time_step, tau=1, dynamics=dynamic_model.f_without_perturbation, observation=sensor_model.H)
 # state_estimator = SMC_Observer(time_step, dynamics=dynamic_model.f_without_perturbation)
-state_estimator = SMC_Observer_2(time_step, dynamics=dynamic_model.f_without_perturbation)
+# state_estimator = SMC_Observer_2(time_step, dynamics=dynamic_model.f_without_perturbation)
+state_estimator = SMC_Observer_3(time_step, dynamics=dynamic_model.f_without_perturbation)
 state_estimator.initialize_state(true_extended_state)
 
 # kalman_filter = EKF(dynamic_model, sensor_model, initial_state_estimate=estimated_extended_state[:2])
-# kalman_filter = KF(dynamic_model, sensor_model, initial_state_estimate=estimated_extended_state)
-kalman_filter = KF_2(dynamic_model, sensor_model, initial_state_estimate=estimated_extended_state)
+kalman_filter = KF(dynamic_model, sensor_model, initial_state_estimate=estimated_extended_state)
+# kalman_filter = KF_2(dynamic_model, sensor_model, initial_state_estimate=estimated_extended_state)
 
 data_store.true_perturbations[0]      = true_extended_state[2]
 data_store.estimated_perturbations[0] = true_extended_state[2]
@@ -57,7 +63,7 @@ for i, t in enumerate(tqdm(times)):
     u = controller.compute_input(i) #- true_extended_state[2]
 
     true_extended_state[:2] = dynamic_model.f(true_extended_state[:2], u, t=t).clone()
-    true_extended_state[2]  = dynamic_model.b(x=true_extended_state[:2], t=t, u=u)
+    true_extended_state[2]  = dynamic_model.b(x=true_extended_state[:2], t=t, u=u) 
     true_extended_state += dynamic_model.process_noise() * time_step
     
     y = sensor_model.h(true_extended_state[:2].clone())
@@ -72,7 +78,8 @@ for i, t in enumerate(tqdm(times)):
     # estimated_extended_state[0] = k_state[0]
     # estimated_extended_state[1] = k_state[1]
     # try:
-    #     estimated_extended_state[2] = k_state[2]
+    #     # estimated_extended_state[2] = k_state[2]
+    #     estimated_extended_state[2] = true_extended_state[2]
     # except:
     #     estimated_extended_state[2] = 0.
     
@@ -85,7 +92,7 @@ for i, t in enumerate(tqdm(times)):
         # estimated_extended_state[0] = y[0]
         # estimated_extended_state[1] = y[1]
         # estimated_extended_state[2] = 0.
-        # estimated_extended_state[2] = controller.perturbation
+        estimated_extended_state[2] = controller.perturbation
         pass
     
     controller.update_state(i, estimated_extended_state[:2])
@@ -111,6 +118,7 @@ for i, t in enumerate(tqdm(times)):
     
     
 # Plot the results
+print(f'==== Results for {controller.name} ====')
 data_store.plot_controls_and_estimations()
 data_store.plot_errors()
 data_store.plot_gain_and_perturbation_derivative()

@@ -23,12 +23,12 @@ class ASTWC():
         
         self.c1    = 1.
         self.s     = 0.
-        self.k     = 5.
+        self.k     = 0.
         self.k_dot = 0.
         
         self.alpha = 100.0
         self.alpha_star = 3.0
-        self.epsilon = 0.02
+        self.epsilon = 0.02 + 0.08
         
         self.x1 = 0.
         self.x2 = 0.

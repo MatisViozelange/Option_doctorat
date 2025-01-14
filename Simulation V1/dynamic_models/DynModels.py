@@ -54,6 +54,8 @@ class SimpleDynamicModel:
     def b(self, x=None, u=None, t=0.0):
         # return 20 * torch.sin(x[0]) + 5 * math.sin(2 * math.pi * self.fb * t)
         return 5 * math.sin(2 * math.pi * self.fb * t) 
+        # return 5 + 10 * torch.tanh(0.1 * t) + 2 * torch.sin(2 * math.pi * self.fb * t)
+        # return 0
          
     
 

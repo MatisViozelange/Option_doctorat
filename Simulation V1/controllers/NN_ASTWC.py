@@ -66,6 +66,6 @@ class NN_based_STWC(ASTWC):
         self.nn.compute_weights(i, self.k, self.s, self.epsilon)
         self.perturbation = self.nn.compute_perturbation(i)
         
-        self.u = u_ASTWC #- self.perturbation
+        self.u = u_ASTWC - self.perturbation
         
         return torch.tensor([self.u], dtype=float)
