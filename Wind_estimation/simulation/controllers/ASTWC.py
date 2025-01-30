@@ -22,7 +22,7 @@ class ASTWC():
         
         self.alpha = 100.0
         self.alpha_star = 3.0
-        self.epsilon = 0.02 + 0.08
+        self.epsilon = 0.02 
         
         self.x1 = 0.
         
@@ -36,9 +36,9 @@ class ASTWC():
     def init_state(self, x0):
         self.x1 = x0[0]
         
-    def compute_input(self, i):
+    def compute_input(self, i, a, b):
         self.y = self.x1
-        self.e = self.y - self.y_ref[i]
+        self.e = (self.y - self.y_ref[i])
         
         self.s = self.c1 * self.e
         
@@ -52,9 +52,11 @@ class ASTWC():
         self.v_dot = -self.k * torch.sign(self.s)
         self.v += self.v_dot * self.Te
         
-        self.u = -self.k * torch.sqrt(torch.abs(self.s)) * torch.sign(self.s) + self.v
+        self.u = - self.k * torch.sqrt(torch.abs(self.s)) * torch.sign(self.s) + self.v
+
+        self.u_eq = 1/b * (-a + self.y_ref[i]) + 1/b * self.u
         
-        return torch.tensor([self.u], dtype=float)
+        return torch.tensor([self.u_eq], dtype=float)
     
     def update_state(self, i, new_state):
         self.x1 = new_state[0]

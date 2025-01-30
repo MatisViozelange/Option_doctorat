@@ -25,7 +25,7 @@ data_store = DataStore(times=times, reference=reference, Te=time_step)
 data_store.control_param_init(controller)
 
 # Initial state estimate
-initial_state_estimate = torch.tensor([1., dynamic_model.wind_at(0.)], dtype=float)  
+initial_state_estimate = torch.tensor([5., dynamic_model.wind_at(0.)], dtype=float)  
 
 controller.init_state(initial_state_estimate)
 data_store.initialize(initial_state_estimate[:2])
@@ -45,7 +45,8 @@ state_estimator.initialize_state(true_state)
 # Simulation loop
 for i, t in enumerate(tqdm(times)):  
     ######################## Simulate the system dynamics ########################
-    u = controller.compute_input(i)
+    u = controller.compute_input(i, dynamic_model.a_estimation.item(), dynamic_model.b_estimation.item())
+    # u = controller.compute_input(i, dynamic_model.a.item(), dynamic_model.b.item())
 
     true_state += dynamic_model.f(true_state, u, t=t).clone() * time_step
     
@@ -53,16 +54,18 @@ for i, t in enumerate(tqdm(times)):
     # y += sensor_model.measurement_noise().clone() * time_step
     
     # state estimator
-    # state_estimator.estimate_state(estimated_state, y, u, t)
-    # estimated_state = state_estimator.estimated_state
-    
-    estimated_state = true_state.clone()
+    state_estimator.estimate_state(estimated_state, y, u, t)
+    estimated_state = state_estimator.estimated_state
+    # estimated_state = true_state.clone()
     
     controller.update_state(i, estimated_state)
-    
+
+    if torch.abs(estimated_state[0]) > 90 or torch.abs(true_state[0]) > 90:
+        break
     ############################## Store the data ###########################
     data_store.true_states[:, i + 1] = true_state
     
+    # estimated_state = state_estimator.estimated_state
     data_store.estimated_states[:, i + 1] = estimated_state
     
     data_store.inputs[i] = u

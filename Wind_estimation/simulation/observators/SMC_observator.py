@@ -43,6 +43,7 @@ class SMC_Observer(Common_Observer):
         else:
             self.cond = 1/(torch.abs(phi2) + 1e-9)
             
+        # self.dphi_inv = torch.tensor([[1., 0.], [-phi1/phi2, 1/phi2]], dtype=float)
         if torch.abs(self.cond) < 1e3 :
             self.dphi_inv = torch.tensor([[1., 0.], [-phi1/phi2, 1/phi2]], dtype=float)
         else:

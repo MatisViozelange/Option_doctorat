@@ -36,10 +36,15 @@ class WindTurbineModel:
         self.gamma_2 = -0.02205
         self.gamma_3 =  0.002287 
         self.gamma_4 = -8.173e-05
+
+        self.b = torch.tensor([1.], dtype=float)
+        self.a = torch.tensor([1.], dtype=float)
+
+        self.b_estimation = torch.tensor([1.], dtype=float)
+        self.a_estimation = torch.tensor([1.], dtype=float)
         
         
-    def g1(self, wind_speed, omega_r):
-        lambda_ = self.R * omega_r / wind_speed
+    def g1(self, lambda_):
         return (  self.a0 
                 + self.a1 * lambda_ 
                 + self.a2 * lambda_**2 
@@ -47,8 +52,7 @@ class WindTurbineModel:
                 + self.a4 * lambda_**4 
                 + self.a5 * lambda_**5)
 
-    def g2(self, wind_speed, omega_r):
-        lambda_ = self.R * omega_r / wind_speed
+    def g2(self, lambda_):
         return (  self.gamma_0 
                 + self.gamma_1 * lambda_ 
                 + self.gamma_2 * lambda_**2 
@@ -60,24 +64,22 @@ class WindTurbineModel:
         # compute the model dynamics with the unmodeled dynamics
         omega_r = x[0]
         V       = x[1]
-        
+
         lambda_ = self.R * omega_r / V
         A = 1/2 * self.rho * math.pi * self.R**3 * V**2 
         
-        g1 = self.g1(V, omega_r)
-        g2 = self.g2(V, omega_r)
-        Cp =  (g1 + u * g2)
-        
-        x1_dot = A/lambda_ * Cp / self.J
-        x1_dot -= self.Ng * self.tau_g / self.J
-        
-        x1_dot = V * u
-        
+        g1 = self.g1(lambda_)
+        g2 = self.g2(lambda_)
+
+        self.a = 1/self.J * (A * g1 / lambda_ - self.Ng * self.tau_g)
+        self.b = 1/self.J * A * g2 / lambda_
+
+        x1_dot = self.a + self.b * u
         x2_dot = self.wind_dynamics[int(t / self.dt)]
-        
+
         x_dot = torch.tensor([x1_dot, x2_dot], dtype=float) 
         
-        return x_dot 
+        return x_dot
         
     def f_estimated(self, x_hat, u, t):
         
@@ -86,9 +88,15 @@ class WindTurbineModel:
         V_hat       = x_hat[1]
         
         lambda_ = self.R * omega_r_hat / V_hat
-        A = 1/2 * self.rho * math.pi * self.R**3 * V_hat**2 
-        
-        x1_dot = 1/self.J * (A * (self.g1(V_hat, omega_r_hat) + u * self.g2(V_hat, omega_r_hat))/lambda_)
+        A = 1/2 * self.rho * math.pi * self.R**3 * V_hat**2
+
+        g1 = self.g1(lambda_)
+        g2 = self.g2(lambda_)
+
+        self.a_estimation = 1/self.J * (A * g1 / lambda_ - self.Ng * self.tau_g)
+        self.b_estimation = 1/self.J * A * g2 / lambda_
+
+        x1_dot = self.a_estimation + self.b_estimation * u
         
         x_dot = torch.tensor([x1_dot, 0.], dtype=float) 
         
@@ -108,7 +116,7 @@ class WindTurbineModel:
         
         lambda_ = self.R * omega_r / V
         A = 1/2 * self.rho * math.pi * self.R**3 * V**2 
-        Cp = self.g1(V, omega_r) + u * self.g2(V, omega_r)
+        Cp = self.g1(lambda_) + u * self.g2(lambda_)
         
         phi1 = -1/(omega_r**2) * Cp
         phi1 += 1/omega_r * (
@@ -155,7 +163,7 @@ class WindTurbineModel:
         f_wind = 0.1  # Hz
         wind_profile = 2 * torch.sin(2 * math.pi * f_wind * time)
         # add an offset of 10 m/s
-        wind_profile += 10
+        wind_profile += 15
         
         return wind_profile
 

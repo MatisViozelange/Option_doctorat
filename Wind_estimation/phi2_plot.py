@@ -25,7 +25,7 @@ gamma_3 = 0.002287
 gamma_4 = -8.173e-05
 
 # Control input of the wind turbine
-beta = 10
+beta = 45
 
 def f(wind_speed, omega_r):
     lambda_ = R * omega_r / wind_speed
@@ -70,30 +70,30 @@ def phi_2(omega_r, wind_speed):
     
     return A * (T1 - T2)
 
-def mat_cond(omega_r, wind_speed):
-    phi2 = np.abs(phi_2(omega_r, wind_speed))
+# def mat_cond(omega_r, wind_speed):
+#     phi2 = np.abs(phi_2(omega_r, wind_speed))
     
-    epsilon = 1e-10
-    # Perform element-wise comparison:
-    cond = np.where(phi2 > 1, phi2, 1/(phi2 + epsilon))
+#     epsilon = 1e-10
+#     # Perform element-wise comparison:
+#     cond = np.where(phi2 > 1, phi2, 1/(phi2 + epsilon))
     
-    max_cond = 500
+#     max_cond = 500
     
-    limited_cond = np.where(cond <= max_cond, cond, max_cond)
-    return limited_cond
+#     limited_cond = np.where(cond <= max_cond, cond, max_cond)
+#     return limited_cond
 
         
 
 # Create grid for plotting
-omega_r_vals = np.linspace(1, 15, 2000)
-wind_speed_vals = np.linspace(1, 25, 2000) 
+omega_r_vals = np.linspace(1, 4, 2000)
+wind_speed_vals = np.linspace(1, 15, 2000) 
 # omega_r_vals = np.linspace(1, 10, 2000)
 # wind_speed_vals = np.linspace(10, 25, 2000) 
 omega_r_grid, wind_speed_grid = np.meshgrid(omega_r_vals, wind_speed_vals)
 
 # Compute Z values
-# Z = phi_2(omega_r_grid, wind_speed_grid)
-Z = mat_cond(omega_r_grid, wind_speed_grid)
+Z = phi_2(omega_r_grid, wind_speed_grid)
+# Z = mat_cond(omega_r_grid, wind_speed_grid)
 
 # Make the 3D plot
 fig = plt.figure(figsize=(10, 8))
@@ -124,7 +124,7 @@ ax.view_init(elev=30, azim=60)
 # Add maximal Z
 # max_z = np.max(Z)
 # ax.text2D(0.05, 0.95, f"Max Z: {max_z:.2f}", transform=ax.transAxes)
-ax.set_zlim(0, 1000)
+# ax.set_zlim(-1, 1)
 
 plt.title('3D Surface Plot of $\phi_2(\omega_r, w)$')
 plt.tight_layout()
