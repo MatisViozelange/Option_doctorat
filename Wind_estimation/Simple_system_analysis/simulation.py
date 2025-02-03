@@ -9,15 +9,15 @@ from dynamic_models import WindTurbineModel
 simulation_time = 100
 time_step = 0.001
 times = np.arange(0.0, simulation_time, time_step)
-
+                                                                          
 # ------------------ Initialize dynamic model + states ------------------
 dynamic_model = WindTurbineModel(dt=time_step, time=times)
 dynamic_model.Cp_model = "exp"  # "exp" or "polynomial"
-initial_state = np.array([0.08, dynamic_model.wind_at(0.)])
+initial_state = np.array([0.1, dynamic_model.wind_at(0.)])
 
 true_state = initial_state.copy()
 estimated_state = initial_state.copy()
-# estimated_state[1] += 1.  # small offset
+estimated_state[1] = 15.  # offset
 
 # ------------------ Initialize observer ------------------
 state_estimator = SMC_Observer(
@@ -34,13 +34,14 @@ Cp_values              = np.zeros(len(times))
 Cp_estimation_values   = np.zeros(len(times))
 phi2_values            = np.zeros(len(times))
 phi2_estimation_values = np.zeros(len(times))
+lambda_values          = np.zeros(len(times))
 
 true_states[0, :] = true_state
 estimated_states[0, :] = estimated_state
 
 # ------------------ Simulation loop ------------------
 for i, t in enumerate(tqdm(times)):
-    # Input control (in degrees, but presumably converted internally)
+    # Input control 
     u = 0 * np.pi / 180
     
     # --- True system update ---
@@ -71,6 +72,7 @@ for i, t in enumerate(tqdm(times)):
     estimated_states[i, 1] = estimated_state[1]
     phi2_values[i] = dynamic_model.compute_phi2(true_state, u)
     phi2_estimation_values[i] = dynamic_model.compute_phi2(estimated_state, u)
+    lambda_values[i] = dynamic_model.lambda_value
 
 V_smooth = np.convolve(estimated_states[:, 1], np.ones(100) / 100, mode='valid')
 V_smooth = np.pad(V_smooth, (0, 100), mode='edge')
@@ -86,7 +88,7 @@ fig, axes = plt.subplots(2, 2, figsize=(8, 6), sharex=True)
 ax_x1.plot(times, true_states[:, 0], label='True omega_r')
 # ax_x1.plot(times, estimated_states[:, 0], label='Estimated omega_r', linestyle='--')
 ax_x1.plot(times, omega_r_smooth[:-1], label='smoothed omega_r', linestyle='-.')
-ax_x1.set_title('omega_r')
+ax_x1.set_title('omega_r (rad/s)')
 # ax_x1.set_xlabel('Time [s]')
 ax_x1.set_ylabel('x1')
 ax_x1.legend()
@@ -95,7 +97,7 @@ ax_x1.grid(True)
 ax_x3.plot(times, true_states[:, 1], label='True V')
 ax_x3.plot(times, V_smooth[:-1], label='V smoothed', linestyle='-.')
 # ax_x3.plot(times, estimated_states[:, 1], label='Estimated V', linestyle='--')
-ax_x3.set_title('V')
+ax_x3.set_title('V (m/s)')
 ax_x3.set_xlabel('Time [s]')
 ax_x3.set_ylabel('x2')
 ax_x3.legend()
@@ -109,13 +111,20 @@ ax_x2.set_ylabel('Cp')
 ax_x2.legend()
 ax_x2.grid(True)
 
-ax_x4.plot(times, phi2_values, label='phi2')
-ax_x4.plot(times, phi2_estimation_values, label='Estimated phi2')
-ax_x4.set_title('phi2')
+ax_x4.plot(times, lambda_values, label='lambda')
+ax_x4.set_title('lambda')
 ax_x4.set_xlabel('Time [s]')
-ax_x4.set_ylabel('phi2')
+ax_x4.set_ylabel('lambda')
 ax_x4.legend()
 ax_x4.grid(True)
+
+# ax_x4.plot(times, phi2_values, label='phi2')
+# ax_x4.plot(times, phi2_estimation_values, label='Estimated phi2')
+# ax_x4.set_title('phi2')
+# ax_x4.set_xlabel('Time [s]')
+# ax_x4.set_ylabel('phi2')
+# ax_x4.legend()
+# ax_x4.grid(True)
 
 plt.show()
 

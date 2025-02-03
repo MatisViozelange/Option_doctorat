@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from math import pi
 
 # -----------------------------
 # 1) Define your known constants
@@ -113,9 +114,9 @@ def exponential_Cp(lambda_, beta, constants):
     
     return c0 * bracket * expo + c8*lambda_safe
 
-# -------------------------
-# 5) Compute and plot
-# -------------------------
+# -------------------------#
+# 5) Compute and plot      #
+# -------------------------#
 
 def Ct(lambda_, Cp_func, beta):
     # Ct = Cp / lambda
@@ -123,8 +124,8 @@ def Ct(lambda_, Cp_func, beta):
     return Cp_func(lambda_safe, beta) / lambda_safe
 
 # Create grids for lambda and beta
-lambda_space = np.linspace(0.0, 18, 100)
-beta_space   = np.linspace(0, 45, 100)  # e.g., from 0 to 40 deg
+lambda_space = np.linspace(0.3, 30, 100) #* pi / 180  # e.g., from 0.3 to 18 deg
+beta_space   = np.linspace(0, 40, 100)   # e.g., from 0 to 40 deg
 lambda_grid, beta_grid = np.meshgrid(lambda_space, beta_space)
 
 # --- Polynomial surfaces ---
