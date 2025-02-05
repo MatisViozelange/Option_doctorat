@@ -4,11 +4,13 @@ import matplotlib.pyplot as plt
 
 from observators import SMC_Observer
 from dynamic_models import WindTurbineModel
+from controllers import ASTWC
 
 def run_simulation(u, 
                    simulation_time=100, 
                    time_step=0.001, 
-                   Cp_model="polynomial"):
+                   Cp_model="polynomial",
+                   apply_control=False):
     """
     Runs a single simulation for a fixed pitch angle u_radians.
     Returns:
@@ -40,6 +42,12 @@ def run_simulation(u,
     )
     state_estimator.initialize_state(estimated_state)
     
+    # ------------------ Initialize controller ------------------
+    if apply_control:
+        reference = 10 * 2 * np.pi / 60  # rad/s
+        references = np.ones_like(times) * reference
+        controller = ASTWC(simulation_time, time_step, reference=reference)
+    
     # Prepare storage
     n = len(times)
     true_states            = np.zeros((n, 2))
@@ -57,7 +65,7 @@ def run_simulation(u,
         # --- True system update ---
         true_state += dynamic_model.model(true_state, u, t=t) * time_step
         # Keep wind updating
-        true_state[1] = dynamic_model.wind_at(t)
+        # true_state[1] = dynamic_model.wind_at(t)
         
         # measured output
         y = true_state[0] + np.random.normal(0, .05, size=(1,))[0] * time_step
@@ -87,10 +95,10 @@ def run_simulation(u,
 
 def main():
     # Define your angles in degrees
-    angles_deg = np.array([0., 5.])
+    angles_deg = np.array([0.])
     
     # Cp model 
-    Cp_model = "polynomial" # "exp", "sinus" or "polynomial"
+    Cp_model = "sinus" # "exp", "sinus" or "polynomial"
     
     # ------------------------------------------------
     # Figure 1 for (omega_r) and (V)
@@ -113,7 +121,8 @@ def main():
          lambda_values) = run_simulation(u=angle,
                                          simulation_time=100, 
                                          time_step=0.001, 
-                                         Cp_model=Cp_model)
+                                         Cp_model=Cp_model,
+                                         apply_control=False)
         
         # Smoothing 
         conv_factor = 1

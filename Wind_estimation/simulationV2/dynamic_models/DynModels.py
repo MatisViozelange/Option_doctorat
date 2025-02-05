@@ -10,6 +10,9 @@ class WindTurbineModel:
         # self.Cp_model = "exp"
         self.Cp_model = "polynomial"
         
+        # select the type of Cp model to use
+        self.Cp_exp_type = "Feng"
+        self.Cp_sin_type = "Moussa"
         
         # Time step and simulation time
         self.dt = dt
@@ -41,7 +44,6 @@ class WindTurbineModel:
         self.gamma_4 = -8.173e-05
         
         # Sinusoidal Cp coefficients
-        self.Cp_sin_type = "Merahi"
         b_values = {
             "Moussa":  [0.5, -0.00167, -2,    0.1,   18.5,  -0.3,  -2,     0.00184, -3, -2],
             "Coto":    [0.44, 0,        0,    -1.6,  15,    0,     0,      0,       0,  0 ],
@@ -53,7 +55,6 @@ class WindTurbineModel:
             setattr(self, f"b{i}", b_values[self.Cp_sin_type][i])
         
         # Exponential Cp coefficients
-        self.Cp_exp_type = "Feng"
         exponential_constants = {
             "Kotti":   [0.5,    116,   0.0,   0.4,   0.0,   0.0,   5.0,   21.0, 0.0,   0.008, 0.0,    0.035],
             "Khajuria":[0.5,    116,   0.4,   0.0,   0.0,   0.0,   5.0,   21.0, 0.0,   0.0,   0.088,  0.035],
@@ -69,10 +70,10 @@ class WindTurbineModel:
         
         
     def generate_wind_profile(self, time):
-        wind_profile = 13.0 * np.ones_like(time)
+        wind_profile = 10.0 * np.ones_like(time)
         # Optionally, add fluctuations:
-        wind_profile += 2 * np.sin(0.2 * np.pi * 0.1 * time) + np.random.normal(0., 0.05, len(time))
-        wind_profile += 2 * np.tanh((time - 50) / 50)
+        wind_profile += 2 * np.sin(2 * np.pi * 0.1 * time) + np.random.normal(0., 0.05, len(time))
+        wind_profile -= 2 * np.tanh((time - 50) / 50)
         return wind_profile
     
     # --- Polynomial model helper functions ---

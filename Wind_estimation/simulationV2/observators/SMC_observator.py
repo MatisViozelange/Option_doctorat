@@ -20,9 +20,9 @@ class SMC_Observer(Common_Observer):
     def __init__(self, dt, dynamics, dphi) -> None:
         super().__init__(dt, dynamics, dphi)
 
-        self.Lphi1 =  1 #   exp (Feng) : 1    | sinus (Merahi) : 1  
-        self.s1    =  1 #   exp (Feng) : 10.5 | sinus (Merahi) : 1   
-        self.s2    = .1 #   exp (Feng) : .25  | sinus (Merahi) : .1      
+        self.Lphi1 =  1 #10
+        self.s1    =  10.5 # 10.5
+        self.s2    = .25 #.25
         
     def estimate_state(self, x_estimated, y, u, t):
         self.estimation_error = x_estimated[0] - y

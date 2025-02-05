@@ -48,7 +48,7 @@ exponential_constants = {
 }
 
 # Choose which reference set you want for the exponential model:
-selected_exponential = "Ovando"  # e.g., "Kotti", "Khajuria", ...
+selected_exponential = "Kotti"  # e.g., "Kotti", "Khajuria", ...
 
 # -------------------------------------------------------
 # 3) Define the polynomial Cp and sinusoidal Cp functions
@@ -124,8 +124,8 @@ def Ct(lambda_, Cp_func, beta):
     return Cp_func(lambda_safe, beta) / lambda_safe
 
 # Create grids for lambda and beta
-lambda_space = np.linspace(0.3, 30, 100) #* pi / 180  # e.g., from 0.3 to 18 deg
-beta_space   = np.linspace(0, 40, 100)   # e.g., from 0 to 40 deg
+lambda_space = np.linspace(0.5, 30, 100) #* pi / 180  # e.g., from 0.3 to 18 deg
+beta_space   = np.linspace(0, 20, 100)   # e.g., from 0 to 40 deg
 lambda_grid, beta_grid = np.meshgrid(lambda_space, beta_space)
 
 # --- Polynomial surfaces ---
